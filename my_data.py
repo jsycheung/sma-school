@@ -128,5 +128,21 @@ plotms(vis=myvis, xaxis='channel',yaxis='amp',
 flagdata(vis=myvis, mode='manual', spw="10:84", flagbackup=False)
 flagmanager(vis=myvis, mode='save', versionname='pcal2')
 
+from casatools import table, msmetadata
+msmd.open(myvis)
+scan_idx = msmd.scannumbers()[0]
+all_spws = msmd.spwsforscan(scan_idx)
+mean_freq = np.mean([np.mean(msmd.chanfreqs(spw_idx)) for spw_idx in all_spws])
+msmd.close()
+
+#the flux we found in the sma calibrator list
+flux_stokesI = 2.06
+
+setjy(vis=myvis, field=flux, spw='',
+       fluxdensity=[flux_stokesI, 0, 0, 0],
+       reffreq=f"{mean_freq/1e9}GHz",
+       scalebychan=True,
+       standard='manual',
+       usescratch=False)
 
 # setjy
