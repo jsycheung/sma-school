@@ -128,6 +128,7 @@ plotms(vis=myvis, xaxis='channel',yaxis='amp',
 flagdata(vis=myvis, mode='manual', spw="10:84", flagbackup=False)
 flagmanager(vis=myvis, mode='save', versionname='pcal2')
 
+# setjy
 from casatools import table, msmetadata
 msmd.open(myvis)
 scan_idx = msmd.scannumbers()[0]
@@ -145,4 +146,30 @@ setjy(vis=myvis, field=flux, spw='',
        standard='manual',
        usescratch=False)
 
-# setjy
+# calibration setup
+refant = 'Ant1'
+
+min_solint = 'int'
+
+# phase-only selfcal for bandpass calibrator. because it is point source and bright, phase is 0
+phaseshortgaincal_table = '{0}.bpself.gcal'.format(myvis)
+if os.path.exists(phaseshortgaincal_table):
+    os.system(f'rm -rf {phaseshortgaincal_table}')
+
+gaincal(vis=myvis,caltable=phaseshortgaincal_table,
+        field=bpcal,spw="",refant=refant, scan="",
+        calmode='p',
+        solint=min_solint,
+        minsnr=2.0, minblperant=3,
+        gaintable=[])
+
+# Plot the table to inspect the calibration solution
+plotms(vis=phaseshortgaincal_table,
+       xaxis='time',
+       yaxis='phase',
+       coloraxis='spw',
+       iteraxis='antenna',
+       ydatacolumn='data',
+       gridrows=3, gridcols=3,
+       yselfscale=True,
+       xconnector='line', timeconnector=True)
