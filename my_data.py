@@ -116,4 +116,7 @@ flagdata(vis=myvis, mode='manual', spw="4:208", flagbackup=False)
 flagdata(vis=myvis, mode='manual', spw="2:273", flagbackup=False)
 flagdata(vis=myvis, mode='manual', spw="7:208", flagbackup=False) 
 flagdata(vis=myvis, mode='manual', spw="7:160", flagbackup=False) 
+flagdata(vis=myvis, mode='manual', spw="1:84", flagbackup=False)
+flagmanager(vis=myvis, mode='save', versionname='pcal1')
+
 # setjy
