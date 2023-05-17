@@ -173,3 +173,33 @@ plotms(vis=phaseshortgaincal_table,
        gridrows=3, gridcols=3,
        yselfscale=True,
        xconnector='line', timeconnector=True)
+
+# Syntax is: time avg., freq avg.
+bpsolint = 'inf,4ch'
+bandpass_table = '{0}.bandpass.solnorm_true.bcal'.format(myvis)
+if os.path.exists(bandpass_table):
+    os.system(f'rm -rf {bandpass_table}')
+
+# smooth some channels CHECK SMOOTHING WINDOW, fit the soln
+bandpass(vis=myvis,caltable=bandpass_table,
+         bandtype='B', scan="",
+         field=bpcal, spw="",
+         combine='scan,field',
+         refant=refant,
+         solint=bpsolint, solnorm=True, minblperant=3,
+         fillgaps=10,  # If some channels are flagged above, interpolate over in the BP
+         gaintable=[phaseshortgaincal_table])
+
+plotms(vis=bandpass_table,xaxis='freq',
+       yaxis='phase',
+       coloraxis='spw',iteraxis='antenna',ydatacolumn='data',
+       gridrows=3, gridcols=3,
+       yselfscale=True,)
+
+plotms(vis=bandpass_table,xaxis='freq',
+       yaxis='amp',
+       coloraxis='spw',iteraxis='antenna',ydatacolumn='data',
+       gridrows=3, gridcols=3,
+       yselfscale=True,)
+
+#this_spwmap leave out anything beyond 6.
