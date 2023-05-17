@@ -119,4 +119,14 @@ flagdata(vis=myvis, mode='manual', spw="7:160", flagbackup=False)
 flagdata(vis=myvis, mode='manual', spw="1:84", flagbackup=False)
 flagmanager(vis=myvis, mode='save', versionname='pcal1')
 
+plotms(vis=myvis, xaxis='channel',yaxis='amp',
+       field=pcal2,
+       avgtime='1e8', avgscan=False,
+       coloraxis='Corr',iteraxis='spw', ydatacolumn='data',
+       gridrows=4, gridcols=3, yselfscale=True)
+
+flagdata(vis=myvis, mode='manual', spw="10:84", flagbackup=False)
+flagmanager(vis=myvis, mode='save', versionname='pcal2')
+
+
 # setjy
