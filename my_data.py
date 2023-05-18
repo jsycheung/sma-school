@@ -201,5 +201,63 @@ plotms(vis=bandpass_table,xaxis='freq',
        coloraxis='spw',iteraxis='antenna',ydatacolumn='data',
        gridrows=3, gridcols=3,
        yselfscale=True,)
+       # we can see some drop off because we didn't flag all edges
+
+plotms(vis=bandpass_table,xaxis='freq',
+       yaxis='amp',
+       coloraxis='spw',iteraxis='antenna',ydatacolumn='data',
+       gridrows=3, gridcols=3,
+       yselfscale=True,)
+
+#phase gain calibration
+# per-int phase with combining spws across sidebands.
+gain_phase_int_table = '{0}.intphase_combinespw.gcal'.format(myvis)
+# Receiver 1:
+gaincal(vis=myvis,caltable=gain_phase_int_table,
+        field=calfields,refant=refant,
+        combine='spw',spw='0~5',
+        calmode='p',solint=min_solint,minsnr=2.0,minblperant=3,
+        gaintable=[bandpass_table])
+# Note the same `caltable` name with `append=True`
+# Receiver 2:
+gaincal(vis=myvis,caltable=gain_phase_int_table, append=True,
+        field=calfields, refant=refant,
+        combine='spw',spw='6~11',
+        calmode='p',solint=min_solint,minsnr=2.0,minblperant=3,
+        gaintable=[bandpass_table])
+
+plotms(vis=gain_phase_int_table,xaxis='time',
+       yaxis='phase',
+       coloraxis='spw',iteraxis='antenna',ydatacolumn='data',
+       xconnector='line', timeconnector=True,
+       gridrows=3, gridcols=3,
+       yselfscale=True)
+       # good, smooth phase variation against time
+
+# we make another phase gain solution this time average over longer time
+long_solint = '300s'
+gain_phase_scan_table = '{0}.scanphase_combinespw.gcal'.format(myvis)
+# Receiver 1:
+gaincal(vis=myvis,caltable=gain_phase_scan_table,
+        field=calfields,refant=refant,
+        combine='spw',spw='0~5',
+        calmode='p',solint=long_solint,minsnr=2.0,minblperant=3,
+        gaintable=[bandpass_table])
+# Receiver 2:
+# Note the same `caltable` name with `append=True`
+gaincal(vis=myvis,caltable=gain_phase_scan_table, append=True,
+        field=calfields, refant=refant,
+        combine='spw',spw='6~11',
+        calmode='p',solint=long_solint,minsnr=2.0,minblperant=3,
+        gaintable=[bandpass_table])
+plotms(vis=gain_phase_scan_table, xaxis='time',
+       yaxis='phase',
+       coloraxis='spw',iteraxis='antenna',ydatacolumn='data',
+       xconnector='line', timeconnector=True,
+       gridrows=3, gridcols=3,
+       yselfscale=True)
+       # good, some phase jump towards the end by nothing too crazy
+
+# amplitude gain calibration
 
 #this_spwmap leave out anything beyond 6.
