@@ -492,4 +492,97 @@ plotms(vis=myvis, field=science_jas,
 	   freqframe='LSRK',
        avgtime='1e20', avgscan=True, coloraxis='spw',
 	   )
-spw_freqstring = '2:230~375,3:345~425,4:140~225,4:260~415, 5:190~265'
+spw_freqstring = '2:230~375,3:345~425,4:140~225,4:260~415,5:190~265,9:347~434,9:0~161'
+vis_name_cont = "{}.cont_jas".format(myvis)
+split(vis=myvis, field=science_jas, outputvis=vis_name_cont, keepflags=False, datacolumn='corrected')
+flagdata(vis=vis_name_cont, mode='manual', spw=spw_freqstring)
+plotms(vis=vis_name_cont, field=science_jas,
+       xaxis='Frequency', yaxis='amp',
+	   freqframe='LSRK',
+       avgtime='1e20', avgscan=True, coloraxis='spw',
+	   )
+
+# File names
+# Make the filename based on the name of the target we're imaging.
+# 'natural' refers to how the data are gridded (see 'weighting' setting below).
+imagename = f'{science_jas}_continuum' #Output images
+
+# Imaging parameters
+#Shows residual image and waits after every major cycle iteration.
+# Number of minor cycle iterations will be set manually in viewer.
+interactive = True
+# Number of iterations before stopping deconvolution (global stopping criterion).
+niter = 1000
+#Pixel size of image in arcsec.
+# Needs to be a small fraction (<1/3) of expected beam size (few arcsec in this case).
+cell = '0.5arcsec'
+# Typically about the size of the primary beam (55" for SMA at 1.3mm), measured in
+# number of pixels. Better if it is a power of 2, as it makes the FFT algorithm more efficient.
+imsize = 512
+#Weighting of the visibilities before imaging. Natural gives larger beam, lowest noise (hence max SNR).
+# Uniform gives smallest beam, highest noise. Briggs is something in between depending on robust parameter.
+weighting = 'briggs'
+# Only needed if choosing 'briggs' weighting. Balances between natural (+2) and uniform (-2)
+# in increments of 0.5.
+robust = 0
+
+#Continuum parameters
+#For continuum imaging, use multi-frequency synthesis (mfs) mode.
+# This combines data from all frequencies into our image, which maximizes the sensitivity
+specmode = 'mfs'
+
+# Gridding and CLEAN algorithm choice. All of these, to begin with, are standard inputs,
+# so we do not actually need to input them, but we will here for completeness.
+gridder = 'standard'
+# Classic Hogbom 1974, but modified with major and minor cycles.
+deconvolver = 'hogbom'
+# Standard loop gain gamma which is multiplied by the maximum intensity of the residual image
+# and added to the model.
+gain = 0.1
+# Sets a threshold in Jy/beam. e.g., "5.0mJy/beam". We don't set this as we will set nsigma to estimate it.
+threshold = ""
+# Set global threshold for the residual image max in nsigma*rms to stop iterations
+nsigma = 0.0
+# Max number of minor cycle iterations per major cycle.
+# Set to -1 initially as we will decide iteratively in interactive mode.
+cycleniter = -1
+# Used to determine minor cycle threshold. Factor multiplied by the maximum dirty beam
+# sidelobe level to calculate when to trigger major cycle.
+cyclefactor = 1.0
+# Used to determine minor cycle threshold. If max dirty beam sidelobe level is less than
+# this, use 5% as a threshold to trigger major cycle. Lower boundary for major cycle trigger.
+minpsffraction = 0.05
+# Used to determine minor cycle threshold. If max dirty beam sidelobe level is more than this,
+# use 80% as a threshold to trigger major cycle. Upper boundary for major cycle trigger.
+maxpsffraction = 0.8
+# Primary beam limit sets the size of the field where valid data is included in the field-of-view
+# The primary beam size is set by the antenna size (7 m for SMA antennas).
+# Roughly speaking, the noise level goes as 1 / pb decreasing radially outward.
+pblimit = 0.25
+pbcor = True
+
+import os
+os.system('rm -rf ./'+imagename+'.*')
+
+tclean(vis=vis_name_cont,
+	   imagename=imagename,
+	   field=science_jas,
+	   interactive=interactive,
+	   niter=niter,
+	   cell=cell,
+	   imsize=imsize,
+	   weighting='natural',
+	   robust=robust,
+	   gridder=gridder,
+	   deconvolver=deconvolver,
+          pbcor=pbcor,
+	   gain=gain,
+	   threshold=threshold,
+	   nsigma=nsigma,
+	   cycleniter=cycleniter,
+	   cyclefactor=cyclefactor,
+	   minpsffraction=minpsffraction,
+	   maxpsffraction=maxpsffraction,
+	   specmode=specmode)
+
+# interactive clean, cyclethreshold 2Jy
