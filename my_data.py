@@ -259,5 +259,214 @@ plotms(vis=gain_phase_scan_table, xaxis='time',
        # good, some phase jump towards the end by nothing too crazy
 
 # amplitude gain calibration
+this_spwmap = [0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6 ,6]
+# we apply phase correction before solving for amp gain
+amp_solint = '10min'
 
-#this_spwmap leave out anything beyond 6.
+gain_amp_scan_table = '{0}.amp.gcal'.format(myvis)
+
+gaincal(vis=myvis,caltable=gain_amp_scan_table,
+        field=calfields, spw="", refant=refant,
+        combine='',
+        spwmap=[[],this_spwmap],
+        calmode='a', solint=amp_solint, minsnr=3.0, minblperant=3,
+        gaintable=[bandpass_table,
+                   gain_phase_int_table])
+
+plotms(vis=gain_amp_scan_table, xaxis='time',
+       yaxis='amp',
+       coloraxis='spw',iteraxis='antenna',ydatacolumn='data',
+       xconnector='line', timeconnector=True,
+       gridrows=3, gridcols=3,
+       yselfscale=True)
+
+plotms(vis=gain_amp_scan_table,
+       xaxis='freq', yaxis='amp',
+       coloraxis='field',iteraxis='antenna', ydatacolumn='data',
+       xconnector='line', timeconnector=True,
+       gridrows=3, gridcols=3,
+       yselfscale=True)
+
+# absolute flux calibration
+# Apply to all calibrators except the flux calibrator itself.
+transfer_fields = [bpcal, bothpcal]
+
+fluxboot_table = '{0}.flux.cal'.format(myvis)
+       
+fluxresults = fluxscale(vis=myvis,
+                        caltable=gain_amp_scan_table,
+                        refspwmap=[-1],
+                        transfer=transfer_fields,
+                        fluxtable=fluxboot_table,
+                        reference=flux,
+                        fitorder=1,
+                        incremental=False)
+flagmanager(vis=myvis, mode='save', versionname='beforeapplycal')
+
+# Apply calibrator solutions
+# apply to bpcal
+applycal(vis=myvis,field=bpcal,
+         spw="",
+         gaintable=[bandpass_table,
+                    gain_phase_int_table,
+                    fluxboot_table], # This order for tables is reflected in `interp`, `spwmap`, and `gainfield`
+         interp=['linear,linearflag',
+                 'linear,linear',
+                 'nearest,linear'], # for each field, this is how to average/interpolate the solutions in "time,freq"
+         spwmap=[[], this_spwmap, []],
+         gainfield=[bpcal, bpcal, bpcal],
+         flagbackup=False,
+         calwt=False)
+# apply to two gain calibrators
+for pcal in bothpcal.split(","):
+
+    applycal(vis=myvis,field=pcal,
+            spw="",
+            gaintable=[bandpass_table,
+                       gain_phase_int_table,
+                       fluxboot_table],
+            interp=['linear,linearflag',
+                    'linearPD,linear',
+                    'nearest,linear'],
+            spwmap=[[], this_spwmap, []],
+            gainfield=[bpcal, pcal, pcal],
+            flagbackup=False, calwt=False)
+
+# apply to flux calibrators
+applycal(vis=myvis,field=flux,
+         spw="",
+         gaintable=[bandpass_table,
+                    gain_phase_int_table,
+                    fluxboot_table],
+         interp=['nearest','nearestPD','nearest'],
+         spwmap=[[], this_spwmap, []],
+         gainfield=[bpcal, flux, flux],
+         flagbackup=False, calwt=False)
+
+# apply to science fields
+applycal(vis=myvis,field=science_fields,
+        spw="",
+        gaintable=[bandpass_table,
+                   gain_phase_scan_table,
+                   fluxboot_table],
+        interp=['linear,linearflag',
+                'linearPD,linear',
+                'linear,linear'],
+        spwmap=[[], this_spwmap, []],
+        gainfield=[bpcal, bothpcal, bothpcal],
+        flagbackup=False, calwt=False,
+        applymode='calflagstrict')
+flagmanager(vis=myvis, mode='save', versionname='afterapplycal')
+
+# inspect calibrated data
+plotms(vis=myvis, xaxis='channel',
+       yaxis='amp',field=bpcal, avgtime='1e8', avgscan=False,
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+       # flat spectrum, good
+
+plotms(vis=myvis, xaxis='channel',
+       yaxis='phase',field=bpcal, avgtime='1e8', avgscan=False,
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+       # centered at zero, not bad
+
+plotms(vis=myvis, xaxis='time', yaxis='amp',
+       field=bpcal,
+       avgchannel='2048',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+       # amp vs time approximately constant, the scatter is due to the edge channels
+
+plotms(vis=myvis, xaxis='uvdist', yaxis='amp',
+       field=bpcal,
+       avgchannel='2048', avgtime='300',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+       # constant, FT of delta function is constant in visibility space
+
+plotms(vis=myvis, xaxis='channel',
+       yaxis='amp',field=pcal1, avgtime='1e8', avgscan=False,
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+
+plotms(vis=myvis, xaxis='channel',
+       yaxis='phase',field=pcal1, avgtime='1e8', avgscan=False,
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+       # why so scattered? but if i average over channels it is not too bad
+plotms(vis=myvis, xaxis='time', yaxis='amp',
+       field=pcal1,
+       avgchannel='2048',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+plotms(vis=myvis, xaxis='uvdist', yaxis='amp',
+       field=pcal1,
+       avgchannel='2048', avgtime='300',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+
+plotms(vis=myvis, xaxis='channel',
+       yaxis='amp',field=pcal2, avgtime='1e8', avgscan=False,
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+plotms(vis=myvis, xaxis='channel',
+       yaxis='phase',field=pcal2, avgtime='1e8', avgscan=False,
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+plotms(vis=myvis, xaxis='time', yaxis='amp',
+       field=pcal2,
+       avgchannel='2048',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+plotms(vis=myvis, xaxis='uvdist', yaxis='amp',
+       field=pcal2,
+       avgchannel='2048', avgtime='300',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+# for flux cal
+plotms(vis=myvis, xaxis='uvdist', yaxis='amp',
+       field=flux,
+       avgchannel='2048', avgtime='600',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+       # the flux cal is a star, not solar system object, amp vs uvdist is constant
+# inspect targets
+plotms(vis=myvis, xaxis='freq',
+       yaxis='amp',field=science_fields,
+       avgtime='1e8', avgscan=True, avgbaseline=True,
+       spw='',
+       coloraxis='spw', ydatacolumn='corrected',
+       gridrows=1, gridcols=1)
+plotms(vis=myvis, xaxis='freq',
+       yaxis='amp',field='G34.30+0.20',
+       avgtime='1e8', avgscan=True, avgbaseline=True,
+       spw='',
+       coloraxis='spw', ydatacolumn='corrected',
+       gridrows=1, gridcols=1)
+plotms(vis=myvis, xaxis='freq',
+       yaxis='amp',field='SDC35.063-0.726_1',
+       avgtime='1e8', avgscan=True, avgbaseline=True,
+       spw='',
+       coloraxis='spw', ydatacolumn='corrected',
+       gridrows=1, gridcols=1)
+       # saw a line around 231 GHz
+plotms(vis=myvis, xaxis='time', yaxis='amp',
+       field=science_fields,
+       avgchannel='2048',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+plotms(vis=myvis, xaxis='time', yaxis='amp',
+       field='G34.30+0.20',
+       avgchannel='2048',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+plotms(vis=myvis, xaxis='time', yaxis='amp',
+       field='SDC35.063-0.726_1',
+       avgchannel='2048',
+       coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
+       gridrows=4, gridcols=3, yselfscale=True)
+
+# Questions, why sometimes we apply gain phase int table but not gain phase scan table?
+# And we don't apply gain amp scan table because it is already in the fluxboot table?
+# Why is phase vs channel for pcal1 corrected so scattered?
