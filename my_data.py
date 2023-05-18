@@ -26,6 +26,8 @@ calfields= ",".join([bpcal, bothpcal, flux])
 
 # If you have more than 1 science field, separate the source names by a comma in the string.
 science_fields = 'G34.30+0.20,SDC35.063-0.726_1'
+science_jas = science_fields.split(',')[0]
+science_naomi = science_fields.split(',')[1]
 
 # flagmanager(myvis, mode='restore', versionname='original.old.1684270218')
 
@@ -394,7 +396,7 @@ plotms(vis=myvis, xaxis='channel',
        yaxis='phase',field=pcal1, avgtime='1e8', avgscan=False,
        coloraxis='ant1',iteraxis='spw', ydatacolumn='corrected',
        gridrows=4, gridcols=3, yselfscale=True)
-       # why so scattered? but if i average over channels it is not too bad
+       # why so scattered? but if i average over channels it is not too bad. if average is centered zero, just that it's not very bright
 plotms(vis=myvis, xaxis='time', yaxis='amp',
        field=pcal1,
        avgchannel='2048',
@@ -470,3 +472,24 @@ plotms(vis=myvis, xaxis='time', yaxis='amp',
 # Questions, why sometimes we apply gain phase int table but not gain phase scan table?
 # And we don't apply gain amp scan table because it is already in the fluxboot table?
 # Why is phase vs channel for pcal1 corrected so scattered?
+
+# tclean, usage of mask is to see if the point is physical or sidelobe
+tclean(vis=myvis, field=bpcal, imagename=f'{bpcal}_test',
+       imsize=128, cell='0.6arcsec', specmode='mfs',
+       weighting='briggs', robust=0., niter=0)
+imview(f'{bpcal}_test.image', out=f'{bpcal}_test_image.jpg')
+tclean(vis=myvis, field=pcal1, imagename=f'{pcal1}_test',
+       imsize=128, cell='0.6arcsec', specmode='mfs',
+       weighting='briggs', robust=0., niter=0)
+imview(f'{pcal1}_test.image', out=f'{pcal1}_test_image.jpg')
+tclean(vis=myvis, field=pcal2, imagename=f'{pcal2}_test',
+       imsize=128, cell='0.6arcsec', specmode='mfs',
+       weighting='briggs', robust=0., niter=0)
+
+# flag line emission before making continuum image
+plotms(vis=myvis, field=science_jas,
+       xaxis='Frequency', yaxis='amp',
+	   freqframe='LSRK',
+       avgtime='1e20', avgscan=True, coloraxis='spw',
+	   )
+spw_freqstring = '2:230~375,3:345~425,4:140~225,4:260~415, 5:190~265'
