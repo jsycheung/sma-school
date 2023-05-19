@@ -585,4 +585,4 @@ tclean(vis=vis_name_cont,
 	   maxpsffraction=maxpsffraction,
 	   specmode=specmode)
 
-# interactive clean, cyclethreshold 2Jy
+# interactive clean, cyclethreshold 0.3Jy
